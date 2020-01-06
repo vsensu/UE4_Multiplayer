@@ -22,6 +22,11 @@ AThirdPersonMPProjectile::AThirdPersonMPProjectile()
 	SphereComponent->InitSphereRadius(37.5f);
 	SphereComponent->SetCollisionProfileName(TEXT("BlockAllDynamic"));
 	RootComponent = SphereComponent;
+	//Registering the Projectile Impact function on a Hit event.
+	if (Role == ROLE_Authority)
+	{
+		SphereComponent->OnComponentHit.AddDynamic(this, &AThirdPersonMPProjectile::OnProjectileImpact);
+	}
 
 	//Definition for the Mesh that will serve as our visual representation.
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> DefaultMesh(TEXT("/Game/StarterContent/Shapes/Shape_Sphere.Shape_Sphere"));
@@ -71,3 +76,18 @@ void AThirdPersonMPProjectile::Tick(float DeltaTime)
 
 }
 
+void AThirdPersonMPProjectile::Destroyed()
+{
+    FVector spawnLocation = GetActorLocation();
+    UGameplayStatics::SpawnEmitterAtLocation(this, ExplosionEffect, spawnLocation, FRotator::ZeroRotator, true, EPSCPoolMethod::AutoRelease);
+}
+
+void AThirdPersonMPProjectile::OnProjectileImpact(UPrimitiveComponent *HitComponent, AActor *OtherActor, UPrimitiveComponent *OtherComp, FVector NormalImpulse, const FHitResult &Hit)
+{   
+    if (OtherActor)
+    {
+        UGameplayStatics::ApplyPointDamage(OtherActor, Damage, NormalImpulse, Hit, Instigator->Controller, this, DamageType);
+    }
+
+    Destroy();
+}

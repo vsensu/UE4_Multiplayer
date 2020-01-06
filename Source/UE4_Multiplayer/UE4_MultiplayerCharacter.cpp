@@ -8,6 +8,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Engine/Engine.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AUE4_MultiplayerCharacter
@@ -45,6 +47,8 @@ AUE4_MultiplayerCharacter::AUE4_MultiplayerCharacter()
 
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
+	MaxHealth = 100.0f;
+	CurrentHealth = MaxHealth;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -131,4 +135,42 @@ void AUE4_MultiplayerCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
+
+
+void AUE4_MultiplayerCharacter::GetLifetimeReplicatedProps(TArray <FLifetimeProperty> &OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AUE4_MultiplayerCharacter, CurrentHealth);
+}
+
+void AUE4_MultiplayerCharacter::OnHealthUpdate()
+{
+	// Client-specific functionality
+	if(IsLocallyControlled())
+	{
+		FString healthMessage = FString::Printf(TEXT("You now have %f health remaining."), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+
+		if(CurrentHealth <= 0)
+		{
+			FString deathMessage = FString::Printf(TEXT("You have been killed."));
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, deathMessage);
+		}
+	}
+
+	// Server-specific functionality 
+	if(Role == ROLE_Authority)
+	{
+		FString healthMessage = FString::Printf(TEXT("%s now has %f health remaining."), *GetFName().ToString(), CurrentHealth);
+		GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Blue, healthMessage);
+	}
+
+	// Functions that occur on all machines.
+}
+
+void AUE4_MultiplayerCharacter::OnRep_CurrentHealth()
+{
+	OnHealthUpdate();
 }

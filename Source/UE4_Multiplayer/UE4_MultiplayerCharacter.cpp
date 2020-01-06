@@ -174,3 +174,19 @@ void AUE4_MultiplayerCharacter::OnRep_CurrentHealth()
 {
 	OnHealthUpdate();
 }
+
+void AUE4_MultiplayerCharacter::SetCurrentHealth(float value)
+{
+	if(Role == ROLE_Authority)
+	{
+		CurrentHealth = FMath::Clamp(value, 0.f, MaxHealth);
+		OnHealthUpdate();
+	}
+}
+
+float AUE4_MultiplayerCharacter::TakeDamage(float DamageTaken, struct FDamageEvent const &DamageEvent, AController *EventInstigator, AActor *DamageCauser)
+{
+	float damageApplied = CurrentHealth - DamageTaken;
+	SetCurrentHealth(damageApplied);
+	return damageApplied;
+}

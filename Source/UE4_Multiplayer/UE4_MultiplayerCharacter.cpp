@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/Engine.h"
+#include "ThirdPersonMPProjectile.h"
 
 //////////////////////////////////////////////////////////////////////////
 // AUE4_MultiplayerCharacter
@@ -49,6 +50,12 @@ AUE4_MultiplayerCharacter::AUE4_MultiplayerCharacter()
 	// are set in the derived blueprint asset named MyCharacter (to avoid direct content references in C++)
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
+
+	//Initialize projectile class
+	ProjectileClass = AThirdPersonMPProjectile::StaticClass();
+	//Initialize fire rate
+	FireRate = 0.25f;
+	bIsFiringWeapon = false;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,6 +85,9 @@ void AUE4_MultiplayerCharacter::SetupPlayerInputComponent(class UInputComponent*
 
 	// VR headset functionality
 	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &AUE4_MultiplayerCharacter::OnResetVR);
+
+	// Handle firing projectiles
+	PlayerInputComponent->BindAction("Fire", IE_Pressed, this, &AUE4_MultiplayerCharacter::StartFire);
 }
 
 
@@ -189,4 +199,32 @@ float AUE4_MultiplayerCharacter::TakeDamage(float DamageTaken, struct FDamageEve
 	float damageApplied = CurrentHealth - DamageTaken;
 	SetCurrentHealth(damageApplied);
 	return damageApplied;
+}
+
+void AUE4_MultiplayerCharacter::StartFire()
+{
+    if (!bIsFiringWeapon)
+    {
+        bIsFiringWeapon = true;
+        UWorld* World = GetWorld();
+        World->GetTimerManager().SetTimer(FiringTimer, this, &AUE4_MultiplayerCharacter::StopFire, FireRate, false);
+        HandleFire();
+    }
+}
+
+void AUE4_MultiplayerCharacter::StopFire()
+{
+    bIsFiringWeapon = false;
+}
+
+void AUE4_MultiplayerCharacter::HandleFire_Implementation()
+{
+    FVector spawnLocation = GetActorLocation() + ( GetControlRotation().Vector()  * 100.0f ) + (GetActorUpVector() * 50.0f);
+    FRotator spawnRotation = GetControlRotation();
+
+    FActorSpawnParameters spawnParameters;
+    spawnParameters.Instigator = Instigator;
+    spawnParameters.Owner = this;
+
+    AThirdPersonMPProjectile* spawnedProjectile = GetWorld()->SpawnActor<AThirdPersonMPProjectile>(spawnLocation, spawnRotation, spawnParameters);
 }

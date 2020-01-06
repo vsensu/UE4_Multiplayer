@@ -81,6 +81,31 @@ protected:
 
 	void OnHealthUpdate();
 
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay|Projectile")
+	TSubclassOf<class AThirdPersonMPProjectile> ProjectileClass;
+
+	/** Delay between shots in seconds. Used to control fire rate for our test projectile, but also to prevent an overflow of server functions from binding SpawnProjectile directly to input.*/
+	UPROPERTY(EditDefaultsOnly, Category="Gameplay")
+	float FireRate;
+
+	/** If true, we are in the process of firing projectiles. */
+	bool bIsFiringWeapon;
+
+	/** Function for beginning weapon fire.*/
+	UFUNCTION(BlueprintCallable, Category="Gameplay")
+	void StartFire();
+
+	/** Function for ending weapon fire. Once this is called, the player can use StartFire again.*/
+	UFUNCTION(BlueprintCallable, Category = "Gameplay")
+	void StopFire();
+
+	/** Server function for spawning projectiles.*/
+	UFUNCTION(Server, Reliable)
+	void HandleFire();
+
+	/** A timer handle used for providing the fire rate delay in-between spawns.*/
+	FTimerHandle FiringTimer;
+
 public:
 	void GetLifetimeReplicatedProps(TArray<FLifetimeProperty> &OutLifetimeProps) const override;
 
